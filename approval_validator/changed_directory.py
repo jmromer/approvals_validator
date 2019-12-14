@@ -1,14 +1,13 @@
 from functools import cached_property
-from io import TextIOWrapper
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import IO, Any, Optional, Tuple
 
 import file_utils as util
 
 
 class ChangedDirectory:
     def __init__(self,
-                 changed_file: TextIOWrapper,
+                 changed_file: IO[Any],
                  approvals: Optional[Tuple[str, ...]] = None):
         self._changed_file = changed_file
         self._approvals_received: Tuple[str, ...] = approvals or tuple()

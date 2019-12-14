@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import IO, Any, Optional, Tuple
 
 import click
 
@@ -13,15 +13,14 @@ class FileList(click.ParamType):
     name = "file_paths"
     file_arg = click.File()
 
-    def convert(self, csv_string, param, ctx):
-        return [
+    def convert(self, csv_string, param, ctx) -> Tuple[IO[Any], ...]:
+        return tuple(
             self.file_arg.convert(filepath, param, ctx)
-            for filepath in split_list(csv_string)
-        ]
+            for filepath in split_list(csv_string))
 
 
 class UsernameList(click.ParamType):
     name = "usernames"
 
-    def convert(self, csv_string, param, ctx):
+    def convert(self, csv_string, param, ctx) -> Tuple[str, ...]:
         return split_list(csv_string)

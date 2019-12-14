@@ -1,9 +1,8 @@
 from contextlib import contextmanager
 from exceptions import ProjectRootNotFoundError
 from functools import lru_cache
-from io import TextIOWrapper
 from pathlib import Path
-from typing import List, Set
+from typing import IO, Any, List, Set
 
 OWNERS_FILE: str = "OWNERS"
 DEPS_FILE: str = "DEPENDENCIES"
@@ -59,7 +58,7 @@ def dependencies_set(directory: Path) -> Set[str]:
         return set(line for line in lines if line)
 
 
-def containing_directory(file_object: TextIOWrapper) -> Path:
+def containing_directory(file_object: IO[Any]) -> Path:
     """Return the directory containing the given file."""
     return Path(file_object.name).parent.absolute()
 

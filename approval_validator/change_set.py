@@ -1,13 +1,12 @@
 from functools import cached_property
-from io import TextIOWrapper
-from typing import Iterator, Tuple
+from typing import IO, Any, Iterator, Tuple
 
 from changed_directory import ChangedDirectory
 
 
 class ChangeSet:
-    def __init__(self, approvers: Tuple[str],
-                 changed_files: Tuple[TextIOWrapper]):
+    def __init__(self, approvers: Tuple[str, ...],
+                 changed_files: Tuple[IO[Any], ...]):
         self.approvals_received = approvers
         self.changed_files = changed_files
 
