@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+set -e
+
+GREEN="\e[0;32m"
+RED="\e[0;31m"
+RESET="\033[0m"
+YELLOW="\e[33m"
+
+running() {
+    printf "\n${YELLOW}%s${RESET}\n" "Running $1..."
+}
+
+assert_equal() {
+    local command="${1}"
+    local expected="${2}"
+    local result
+    result="$(eval "$1" | tr -d '[:cntrl:]')"
+
+    if [[ "$result" == "$expected" ]]; then
+        printf "${GREEN}%s${RESET}\n" "$command"
+    else
+        printf "${RED}%s${RESET}" "$command"
+        printf "\nFailed."
+        printf "\tExpected: '%s'" "${expected}"
+        printf "\n\tActual: '%s'\n" "${result}"
+    fi
+}
+
+
+if [[ "$1" == "--docker" ]]; then
+    running "tests with Docker"
+
+    echo docker build -t approvals-validator .
+    docker build -t approvals-validator .
+
+    echo docker run --rm -it approvals-validator
+    docker run --rm -it approvals-validator
+
+    exit 0
+fi
+
+
+# Ensure test dependencies installed
+bin/setup --silent test
+
+
+running "acceptance tests"
+
+assert_equal \
+    "./validate_approvals -c data/minimal/y/file -a B" \
+    "Approved"
+
+assert_equal \
+    "./validate_approvals -c data/minimal/y/file -a A,C" \
+    "Approved"
+
+assert_equal \
+    "./validate_approvals -c data/minimal/y/file -a D" \
+    "Insufficient approvals"
+
+assert_equal \
+    "./validate_approvals --approvers alovelace,ghopper --changed-files data/repo/src/com/twitter/follow/Follow.java,data/repo/src/com/twitter/user/User.java" \
+    "Approved"
+
+assert_equal \
+    "./validate_approvals --approvers alovelace --changed-files data/repo/src/com/twitter/follow/Follow.java" \
+    "Insufficient approvals"
+
+assert_equal \
+    "./validate_approvals --approvers eclarke --changed-files data/repo/src/com/twitter/follow/Follow.java" \
+    "Insufficient approvals"
+
+assert_equal \
+    "./validate_approvals --approvers alovelace,eclarke --changed-files data/repo/src/com/twitter/follow/Follow.java" \
+    "Approved"
+
+assert_equal \
+    "./validate_approvals --approvers mfox --changed-files data/repo/src/com/twitter/tweet/Tweet.java" \
+    "Approved"
+
+
+running "pytest tests"
+
+source ./env/bin/activate
+pytest -q --cov approval_validator
