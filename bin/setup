@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+
+set -e
+
+#
+# Usage:
+#
+#   bin/setup [OPTIONS] ENV
+#
+# Install dependencies for `validate_approvals` in a virtualenv at project root.
+#
+# Available environments:
+#
+#  dev     Install all dependencies
+#  prod    Install minimal dependencies for running `validate_approvals`
+#  test    Install minimal and test dependencies
+#
+# Available options:
+#
+#  --silent  Run without verbose output
+#
+
+VERBOSE=1
+
+usage() {
+    grep '^#' < "$0" | tail -n +2 | cut -c 3-
+}
+
+notice() {
+    [[ -z "$VERBOSE" ]] && return
+    echo "$1"
+}
+
+cmd_missing() {
+    ! command -v "$1" >/dev/null
+}
+
+check_deps() {
+    if cmd_missing python || cmd_missing easy_install; then
+        echo "Error: Missing dependencies."
+        echo "Please ensure python and easy_install are installed."
+        exit 1
+    fi
+
+    if cmd_missing pip; then
+        notice "pip not found. Installing now..."
+        easy_install pip >/dev/null
+    fi
+
+    if ! python -c "import virtualenv" 2>/dev/null; then
+        notice "virtualenv not found. Installing now..."
+        pip install virtualenv >/dev/null
+    fi
+}
+
+check_test_fixtures() {
+    # Ensure simulated git directory is present in "minimal" fixture.
+    [ -d data/minimal/.git ] && return
+    mkdir data/minimal/.git
+    touch data/minimal/.git/.keep
+}
+
+ensure_virtualenv_present() {
+    if [ ! -d ./env/bin/ ]; then
+        notice "virtualenv not found at ./env. Creating now..."
+        python -m virtualenv ./env >/dev/null
+    fi
+}
+
+install_deps() {
+    source ./env/bin/activate
+
+    if [ "$1" == "dev" ]; then
+        notice "Installing development dependencies..."
+        pip install -r requirements.dev.txt >/dev/null
+    elif [ "$1" == "test" ]; then
+        notice "Installing development dependencies..."
+        pip install -r requirements.test.txt >/dev/null
+    else
+        notice "Installing dependencies..."
+        pip install -r requirements.txt >/dev/null
+    fi
+}
+
+ready_notice() {
+    notice "Dependencies installed."
+    notice "Run the script with:"
+    notice "./validate_approvals"
+}
+
+
+while [ $# -gt -1 ]; do
+    case "$1" in
+        ""|"-h"|"--help"|"help")
+            usage | $PAGER
+            exit 2
+            ;;
+        "--silent")
+            unset VERBOSE
+            shift
+            ;;
+        "prod")
+            check_deps
+            ensure_virtualenv_present
+            install_deps
+            ready_notice
+            exit 0
+            ;;
+        "test")
+            check_deps
+            ensure_virtualenv_present
+            install_deps test
+            check_test_fixtures
+            ready_notice
+            exit 0
+            ;;
+        "dev")
+            check_deps
+            ensure_virtualenv_present
+            install_deps dev
+            ready_notice
+            exit 0
+            ;;
+        *)
+            (>&2 echo "Unrecognized option: $1")
+            exit 1
+            ;;
+    esac
+done
